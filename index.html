@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Days">
+  <meta name="description" content="A simple daily counter with a personal record.">
+  <link rel="manifest" href="./manifest.json">
+  <title>Days</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --background: #000000;
+      --text: #ffffff;
+      --active: #ef3c34;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      background: var(--background);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+      font-synthesis: none;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      height: 100svh;
+      min-height: 30rem;
+      overflow: hidden;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+      background: var(--background);
+      isolation: isolate;
+    }
+
+    .record {
+      position: absolute;
+      z-index: 1;
+      top: calc(var(--safe-top) + 31.5%);
+      left: 50%;
+      max-width: calc(100vw - 2rem);
+      margin: 0;
+      transform: translateX(-50%);
+      color: var(--text);
+      font-size: clamp(1rem, 5.2vw, 1.55rem);
+      font-weight: 100;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .counter-stage {
+      position: absolute;
+      z-index: 1;
+      top: 52.5%;
+      left: 50%;
+      display: grid;
+      width: 100%;
+      transform: translate(-50%, -50%);
+      place-items: center;
+      pointer-events: none;
+    }
+
+    .duration-row {
+      --unit-count: 1;
+      display: grid;
+      grid-template-columns: repeat(var(--unit-count), minmax(0, 1fr));
+      align-items: start;
+      justify-content: center;
+      width: min(72vw, 22rem);
+      max-width: calc(100vw - 2rem);
+      margin-inline: auto;
+    }
+
+    .duration-row[data-unit-count="2"] {
+      --unit-count: 2;
+      width: min(calc(100vw - 2.25rem), 35rem);
+    }
+
+    .duration-row[data-unit-count="3"] {
+      --unit-count: 3;
+      width: min(calc(100vw - 1rem), 42rem);
+    }
+
+    .duration-unit {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
+    }
+
+    .duration-number {
+      color: var(--text);
+      font-size: clamp(8.5rem, 44vw, 12rem);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      line-height: 0.78;
+      letter-spacing: -0.075em;
+      white-space: nowrap;
+    }
+
+    .duration-row[data-unit-count="2"] .duration-number {
+      font-size: clamp(7rem, 34vw, 10rem);
+    }
+
+    .duration-row[data-unit-count="3"] .duration-number {
+      font-size: clamp(4.9rem, 25vw, 7.4rem);
+    }
+
+    .duration-label {
+      margin-top: clamp(2rem, 6.8vw, 3.25rem);
+      color: var(--text);
+      font-size: clamp(1.15rem, 5.2vw, 1.6rem);
+      font-weight: 100;
+      line-height: 1;
+      letter-spacing: -0.045em;
+      white-space: nowrap;
+    }
+
+    .duration-row[data-unit-count="3"] .duration-label {
+      margin-top: clamp(1.5rem, 5vw, 2.5rem);
+      font-size: clamp(0.92rem, 4.1vw, 1.35rem);
+    }
+
+    .reset-button {
+      position: absolute;
+      z-index: 2;
+      left: 50%;
+      bottom: calc(var(--safe-bottom) + 5.8%);
+      display: inline-flex;
+      min-width: 44px;
+      min-height: 44px;
+      max-width: calc(100vw - 2rem);
+      align-items: center;
+      justify-content: center;
+      padding: 0.65rem 0.8rem;
+      border: 0;
+      border-radius: 0;
+      appearance: none;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-size: clamp(1.15rem, 5.2vw, 1.6rem);
+      font-weight: 100;
+      line-height: 1;
+      letter-spacing: -0.045em;
+      text-align: center;
+      white-space: nowrap;
+      transform: translateX(-50%);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .reset-button[data-state="confirming"] {
+      color: var(--active);
+    }
+
+    .reset-button:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 4px;
+    }
+
+    .reset-button:active {
+      opacity: 0.72;
+    }
+
+    @media (max-height: 650px) {
+      .record {
+        top: calc(var(--safe-top) + 27%);
+      }
+
+      .counter-stage {
+        top: 50%;
+      }
+
+      .duration-number {
+        font-size: clamp(6.75rem, 38vw, 9rem);
+      }
+
+      .duration-row[data-unit-count="2"] .duration-number {
+        font-size: clamp(5.75rem, 29vw, 7.6rem);
+      }
+
+      .duration-row[data-unit-count="3"] .duration-number {
+        font-size: clamp(4rem, 21vw, 5.6rem);
+      }
+
+      .duration-label,
+      .duration-row[data-unit-count="3"] .duration-label {
+        margin-top: 1.35rem;
+      }
+
+      .reset-button {
+        bottom: calc(var(--safe-bottom) + 2.5%);
+      }
+    }
+
+    @media (orientation: landscape) {
+      .record {
+        top: calc(var(--safe-top) + 16%);
+      }
+
+      .counter-stage {
+        top: 49%;
+      }
+
+      .duration-number,
+      .duration-row[data-unit-count="2"] .duration-number,
+      .duration-row[data-unit-count="3"] .duration-number {
+        font-size: clamp(4.2rem, 15vw, 7rem);
+      }
+
+      .duration-label,
+      .duration-row[data-unit-count="3"] .duration-label {
+        margin-top: 1.25rem;
+        font-size: clamp(0.9rem, 2.4vw, 1.25rem);
+      }
+
+      .reset-button {
+        right: max(1rem, env(safe-area-inset-right, 0px));
+        bottom: calc(var(--safe-bottom) + 1rem);
+        left: auto;
+        transform: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .reset-button {
+        transition: color 150ms ease, opacity 100ms ease;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app" aria-label="Daily counter">
+    <p class="record" id="record" aria-live="polite">RECORD: 0 DAYS</p>
+
+    <section class="counter-stage" aria-label="Time elapsed since last reset">
+      <div class="duration-row" id="durationRow" data-unit-count="1" aria-live="polite"></div>
+    </section>
+
+    <button class="reset-button" id="resetButton" type="button" data-state="idle" aria-label="Reset counter">
+      RESET
+    </button>
+  </main>
+
+  <script>
+    "use strict";
+
+    // Calendar days roll over at local midnight. Change these two values if a
+    // different local rollover time is ever required.
+    const ROLLOVER_HOUR = 0;
+    const ROLLOVER_MINUTE = 0;
+    const STORAGE_KEY = "dailyCounterDataV1";
+    const CONFIRMATION_SECONDS = 5;
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    const durationRow = document.getElementById("durationRow");
+    const recordElement = document.getElementById("record");
+    const resetButton = document.getElementById("resetButton");
+
+    let rolloverTimer = null;
+    let confirmationTimer = null;
+    let confirmationDeadlineMs = 0;
+    let data = loadData();
+
+    function createInitialData() {
+      return {
+        lastResetMs: Date.now(),
+        bestElapsedDays: 0
+      };
+    }
+
+    function isValidData(value) {
+      return Boolean(
+        value &&
+        typeof value === "object" &&
+        Number.isFinite(value.lastResetMs) &&
+        value.lastResetMs > 0 &&
+        Number.isInteger(value.bestElapsedDays) &&
+        value.bestElapsedDays >= 0
+      );
+    }
+
+    function saveData() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (error) {
+        console.error("Counter data could not be saved.", error);
+      }
+    }
+
+    function loadData() {
+      try {
+        const savedText = localStorage.getItem(STORAGE_KEY);
+
+        if (savedText !== null) {
+          const savedData = JSON.parse(savedText);
+          if (isValidData(savedData)) {
+            return savedData;
+          }
+        }
+      } catch (error) {
+        console.error("Counter data could not be read.", error);
+      }
+
+      const initialData = createInitialData();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+      } catch (error) {
+        console.error("Initial counter data could not be saved.", error);
+      }
+      return initialData;
+    }
+
+    function getCounterDate(timestampMs) {
+      const date = new Date(timestampMs);
+      const beforeRollover =
+        date.getHours() < ROLLOVER_HOUR ||
+        (date.getHours() === ROLLOVER_HOUR && date.getMinutes() < ROLLOVER_MINUTE);
+
+      if (beforeRollover) {
+        date.setDate(date.getDate() - 1);
+      }
+
+      return {
+        year: date.getFullYear(),
+        month: date.getMonth(),
+        day: date.getDate()
+      };
+    }
+
+    function compareCalendarDates(first, second) {
+      return calendarSerial(first) - calendarSerial(second);
+    }
+
+    function calendarSerial(parts) {
+      return Date.UTC(parts.year, parts.month, parts.day);
+    }
+
+    function daysInMonth(year, month) {
+      return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    }
+
+    function addCalendarYearsAndMonths(start, yearsToAdd, monthsToAdd) {
+      const monthIndex = start.month + yearsToAdd * 12 + monthsToAdd;
+      const year = start.year + Math.floor(monthIndex / 12);
+      const month = ((monthIndex % 12) + 12) % 12;
+      return {
+        year,
+        month,
+        day: Math.min(start.day, daysInMonth(year, month))
+      };
+    }
+
+    function getCalendarDuration(startMs, endMs) {
+      const start = getCounterDate(startMs);
+      const end = getCounterDate(endMs);
+
+      if (compareCalendarDates(end, start) < 0) {
+        return { years: 0, months: 0, days: 0, totalDays: 0 };
+      }
+
+      const totalDays = Math.floor((calendarSerial(end) - calendarSerial(start)) / DAY_MS);
+
+      let years = end.year - start.year;
+      let cursor = addCalendarYearsAndMonths(start, years, 0);
+      if (compareCalendarDates(cursor, end) > 0) {
+        years -= 1;
+      }
+
+      let months = (end.year - start.year) * 12 + (end.month - start.month) - years * 12;
+      cursor = addCalendarYearsAndMonths(start, years, months);
+      if (compareCalendarDates(cursor, end) > 0) {
+        months -= 1;
+        cursor = addCalendarYearsAndMonths(start, years, months);
+      }
+
+      const days = Math.max(0, Math.floor((calendarSerial(end) - calendarSerial(cursor)) / DAY_MS));
+      return { years, months, days, totalDays };
+    }
+
+    function unitLabel(value, singular, plural) {
+      return value === 1 ? singular : plural;
+    }
+
+    function visibleDurationParts(duration) {
+      if (duration.years > 0) {
+        return [
+          { value: duration.years, label: unitLabel(duration.years, "YEAR", "YEARS") },
+          { value: duration.months, label: unitLabel(duration.months, "MONTH", "MONTHS") },
+          { value: duration.days, label: unitLabel(duration.days, "DAY", "DAYS") }
+        ];
+      }
+
+      if (duration.months > 0) {
+        return [
+          { value: duration.months, label: unitLabel(duration.months, "MONTH", "MONTHS") },
+          { value: duration.days, label: unitLabel(duration.days, "DAY", "DAYS") }
+        ];
+      }
+
+      return [
+        { value: duration.totalDays, label: unitLabel(duration.totalDays, "DAY", "DAYS") }
+      ];
+    }
+
+    function renderDuration(parts) {
+      durationRow.replaceChildren();
+      durationRow.dataset.unitCount = String(parts.length);
+
+      const fragment = document.createDocumentFragment();
+      for (const part of parts) {
+        const unit = document.createElement("div");
+        unit.className = "duration-unit";
+
+        const number = document.createElement("div");
+        number.className = "duration-number";
+        number.textContent = String(part.value);
+
+        const label = document.createElement("div");
+        label.className = "duration-label";
+        label.textContent = part.label;
+
+        unit.append(number, label);
+        fragment.append(unit);
+      }
+
+      durationRow.append(fragment);
+    }
+
+    function updateDisplay() {
+      const now = Date.now();
+      const duration = getCalendarDuration(data.lastResetMs, now);
+
+      // The record is written only when the current total exceeds it. If several
+      // days passed while the app was closed, this is still just one write.
+      if (duration.totalDays > data.bestElapsedDays) {
+        data.bestElapsedDays = duration.totalDays;
+        saveData();
+      }
+
+      renderDuration(visibleDurationParts(duration));
+      recordElement.textContent = `RECORD: ${data.bestElapsedDays} ${unitLabel(data.bestElapsedDays, "DAY", "DAYS")}`;
+    }
+
+    function millisecondsUntilNextRollover() {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(ROLLOVER_HOUR, ROLLOVER_MINUTE, 0, 0);
+
+      if (next.getTime() <= now.getTime()) {
+        next.setDate(next.getDate() + 1);
+      }
+
+      return Math.max(1, next.getTime() - now.getTime());
+    }
+
+    function scheduleNextRollover() {
+      if (rolloverTimer !== null) {
+        clearTimeout(rolloverTimer);
+      }
+
+      rolloverTimer = window.setTimeout(() => {
+        updateDisplay();
+        scheduleNextRollover();
+      }, millisecondsUntilNextRollover());
+    }
+
+    function resetConfirmation() {
+      if (confirmationTimer !== null) {
+        clearInterval(confirmationTimer);
+      }
+      confirmationTimer = null;
+      confirmationDeadlineMs = 0;
+      resetButton.dataset.state = "idle";
+      resetButton.textContent = "RESET";
+      resetButton.setAttribute("aria-label", "Reset counter");
+    }
+
+    function refreshConfirmationLabel() {
+      const remaining = Math.ceil((confirmationDeadlineMs - Date.now()) / 1000);
+
+      if (remaining < 1) {
+        resetConfirmation();
+        return;
+      }
+
+      resetButton.textContent = `ARE YOU SURE? ${remaining}`;
+      resetButton.setAttribute("aria-label", `Confirm reset, ${remaining} seconds remaining`);
+    }
+
+    function beginResetConfirmation() {
+      confirmationDeadlineMs = Date.now() + CONFIRMATION_SECONDS * 1000;
+      resetButton.dataset.state = "confirming";
+      refreshConfirmationLabel();
+      confirmationTimer = window.setInterval(refreshConfirmationLabel, 250);
+    }
+
+    function confirmReset() {
+      const now = Date.now();
+      const completedDuration = getCalendarDuration(data.lastResetMs, now);
+
+      if (completedDuration.totalDays > data.bestElapsedDays) {
+        data.bestElapsedDays = completedDuration.totalDays;
+      }
+
+      data.lastResetMs = now;
+      saveData();
+      resetConfirmation();
+      updateDisplay();
+      scheduleNextRollover();
+    }
+
+    resetButton.addEventListener("click", () => {
+      if (resetButton.dataset.state !== "confirming") {
+        beginResetConfirmation();
+        return;
+      }
+
+      if (Date.now() < confirmationDeadlineMs) {
+        confirmReset();
+      } else {
+        resetConfirmation();
+      }
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        updateDisplay();
+        scheduleNextRollover();
+        if (confirmationDeadlineMs > 0) {
+          refreshConfirmationLabel();
+        }
+      }
+    });
+
+    window.addEventListener("pageshow", () => {
+      updateDisplay();
+      scheduleNextRollover();
+    });
+
+    updateDisplay();
+    scheduleNextRollover();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js").catch((error) => {
+          console.error("Offline support could not be enabled.", error);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

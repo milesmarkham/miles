@@ -1,0 +1,13 @@
+{
+  "id": "./",
+  "name": "Daily Counter",
+  "short_name": "Days",
+  "description": "A simple daily counter with a personal record.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "categories": ["utilities", "lifestyle"]
+}
