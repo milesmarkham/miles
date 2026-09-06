@@ -1,11 +1,12 @@
 "use strict";
 
 const CACHE_PREFIX = "daily-counter-";
-const CACHE_NAME = `${CACHE_PREFIX}v1`;
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const APP_FILES = [
   "./",
   "./index.html",
   "./manifest.json"
+  "./number-flip.js"
 ];
 
 self.addEventListener("install", (event) => {
