@@ -177,6 +177,31 @@
   font-size: clamp(0.92rem, 4.1vw, 1.35rem);
 }
 
+    /* Styling for the elements created by number-flip.js */
+.duration-number.number-flip {
+  display: inline-block;
+  width: max-content;
+  overflow: hidden;
+  text-indent: 0;
+  vertical-align: top;
+}
+
+.duration-number.number-flip .ctnr {
+  vertical-align: top;
+}
+
+.duration-number.number-flip .digit {
+  margin: 0;
+  padding: 0;
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.78;
+  letter-spacing: -0.075em;
+  text-align: center;
+  white-space: nowrap;
+}
+
     .reset-button {
       position: absolute;
       z-index: 2;
@@ -301,6 +326,8 @@
     </button>
   </main>
 
+  <script src="./number-flip.js"></script>
+
   <script>
     "use strict";
 
@@ -320,6 +347,12 @@
     let confirmationTimer = null;
     let confirmationDeadlineMs = 0;
     let data = loadData();
+
+    const flipInstances = [];
+const NUMBER_FLIP_DURATION = 0.65;
+const reduceNumberMotion = window.matchMedia(
+  "(prefers-reduced-motion: reduce)"
+).matches;
 
     function createInitialData() {
       return {
@@ -462,29 +495,88 @@
       ];
     }
 
-    function renderDuration(parts) {
-      durationRow.replaceChildren();
-      durationRow.dataset.unitCount = String(parts.length);
+    function destroyNumberFlips() {
+  for (const flip of flipInstances) {
+    flip.destroy();
+  }
 
-      const fragment = document.createDocumentFragment();
-      for (const part of parts) {
-        const unit = document.createElement("div");
-        unit.className = "duration-unit";
+  flipInstances.length = 0;
+}
 
-        const number = document.createElement("div");
-        number.className = "duration-number";
-        number.textContent = String(part.value);
+function buildDuration(parts) {
+  destroyNumberFlips();
+  durationRow.replaceChildren();
+  durationRow.dataset.unitCount = String(parts.length);
 
-        const label = document.createElement("div");
-        label.className = "duration-label";
-        label.textContent = part.label;
+  const fragment = document.createDocumentFragment();
+  const numberElements = [];
 
-        unit.append(number, label);
-        fragment.append(unit);
-      }
+  for (const part of parts) {
+    const unit = document.createElement("div");
+    unit.className = "duration-unit";
 
-      durationRow.append(fragment);
+    const number = document.createElement("div");
+    number.className = "duration-number";
+
+    const label = document.createElement("div");
+    label.className = "duration-label";
+    label.textContent = part.label;
+
+    unit.append(number, label);
+    fragment.append(unit);
+    numberElements.push(number);
+  }
+
+  durationRow.append(fragment);
+
+  numberElements.forEach((numberElement, index) => {
+    const flip = new NumberFlip.Flip({
+      node: numberElement,
+      from: parts[index].value,
+      duration: NUMBER_FLIP_DURATION,
+      direct: true
+    });
+
+    flipInstances.push(flip);
+  });
+}
+
+function renderDuration(parts) {
+  const structureChanged =
+    flipInstances.length !== parts.length ||
+    durationRow.dataset.unitCount !== String(parts.length);
+
+  if (structureChanged) {
+    buildDuration(parts);
+    return;
+  }
+
+  const valueChanged = parts.some(
+    (part, index) => flipInstances[index].from !== part.value
+  );
+
+  if (reduceNumberMotion && valueChanged) {
+    buildDuration(parts);
+    return;
+  }
+
+  const units = durationRow.querySelectorAll(".duration-unit");
+
+  parts.forEach((part, index) => {
+    const flip = flipInstances[index];
+    const label = units[index].querySelector(".duration-label");
+
+    label.textContent = part.label;
+
+    if (flip.from !== part.value) {
+      flip.flipTo({
+        to: part.value,
+        duration: NUMBER_FLIP_DURATION,
+        direct: true
+      });
     }
+  });
+}
 
     function updateDisplay() {
       const now = Date.now();
